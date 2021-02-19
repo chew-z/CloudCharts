@@ -1,0 +1,4 @@
+.env.yaml
+go.sum
+*.bak
+*.json
