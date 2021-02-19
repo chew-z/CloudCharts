@@ -1,8 +1,6 @@
-bin/**
+.DS_Store
 go.sum
 README.md
+bin/**
 .git/**
 .gitignore
-*.bak
-*.json
-CloudScrap.go

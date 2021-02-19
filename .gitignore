@@ -1,4 +1,4 @@
-.env.yaml
+.DS_Store
 go.sum
-*.bak
-*.json
+.env.yaml
+bin/**

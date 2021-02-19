@@ -15,8 +15,8 @@ import (
 /*Quotes ...
  */
 type Quotes struct {
-	DefaultChartInterval string          `json:"_default_chart_interval"`
-	RefPrice             float64         `json:"_ref_price"`
+	DefaultChartInterval string          `json:"_default_chart_interval,omitempty"`
+	RefPrice             float64         `json:"_ref_price,omitempty"`
 	Bars                 [][]interface{} `json:"_d"`
 }
 
@@ -51,10 +51,14 @@ func main() {
  */
 func CloudCharts(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+	timeframe := ""
 	if a := query.Get("a"); a != "" {
 		asset = a
 	}
-	if quotes := getQuotes(asset); quotes != nil {
+	if t := query.Get("t"); t != "" {
+		timeframe = t
+	}
+	if quotes := getQuotes(asset, timeframe); quotes != nil {
 		for i, bar := range quotes.Bars {
 			var tmp Candle
 			tm := int64(bar[0].(float64))
@@ -74,9 +78,12 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getQuotes(asset string) *Quotes {
+func getQuotes(asset string, timeframe string) *Quotes {
 	var quotes Quotes
 	apiURL := fmt.Sprintf("%s%s.", apiURL, asset)
+	if timeframe != "" {
+		apiURL += "/" + timeframe
+	}
 	request, _ := http.NewRequest("GET", apiURL, nil)
 	request.Header.Set("User-Agent", userAgent)
 	if response, err := client.Do(request); err == nil {
