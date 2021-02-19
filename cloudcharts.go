@@ -68,7 +68,7 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 			h, _ := bar[2].(float64)
 			l, _ := bar[3].(float64)
 			c, _ := bar[4].(float64)
-			tmp.OHLC = [4]float64{c, o, l, h}
+			tmp.OHLC = [4]float64{c, o, l, h} // this sequence gets candle colors right - green: up. red: down
 			kd[i] = tmp
 		}
 		kline := ohlcChart()
@@ -97,15 +97,15 @@ func getQuotes(asset string, timeframe string) *Quotes {
 func ohlcChart() *charts.Kline {
 	// create a new chart instance
 	kline := charts.NewKLine()
-	x := make([]string, 0)
-	y := make([]opts.KlineData, 0)
+	x := make([]string, 100)
+	y := make([]opts.KlineData, 100)
 	for i := 0; i < len(kd); i++ {
-		x = append(x, kd[i].Time)
-		y = append(y, opts.KlineData{Value: kd[i].OHLC})
+		x[i] = kd[i].Time
+		y[i] = opts.KlineData{Value: kd[i].OHLC}
 	}
 	kline.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[0]),
+			Title: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[3]),
 		}),
 		charts.WithXAxisOpts(opts.XAxis{
 			SplitNumber: 20,
