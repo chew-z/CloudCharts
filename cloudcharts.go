@@ -24,7 +24,7 @@ type Quotes struct {
  */
 type Candle struct {
 	Time string
-	// BOSSA API is OHLC go-echarts weird COLH
+	// BOSSA API is OHLC go-echarts OCLH
 	OHLC [4]float64
 }
 
@@ -68,7 +68,7 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 			h, _ := bar[2].(float64)
 			l, _ := bar[3].(float64)
 			c, _ := bar[4].(float64)
-			tmp.OHLC = [4]float64{c, o, l, h} // this sequence gets candle colors right - green: up. red: down
+			tmp.OHLC = [4]float64{o, c, l, h} // OHLC to OCLH
 			kd[i] = tmp
 		}
 		kline := ohlcChart()
@@ -105,7 +105,8 @@ func ohlcChart() *charts.Kline {
 	}
 	kline.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[3]),
+			Title:    asset,
+			Subtitle: fmt.Sprintf("%.5g", kd[99].OHLC[3]),
 		}),
 		charts.WithXAxisOpts(opts.XAxis{
 			SplitNumber: 20,
@@ -113,41 +114,50 @@ func ohlcChart() *charts.Kline {
 		charts.WithYAxisOpts(opts.YAxis{
 			Scale: true,
 		}),
-		// charts.WithDataZoomOpts(opts.DataZoom{
-		// 	Type:       "inside",
-		// 	Start:      50,
-		// 	End:        100,
-		// 	XAxisIndex: []int{0},
-		// }),
 		charts.WithDataZoomOpts(opts.DataZoom{
 			Type:       "slider",
 			Start:      50,
 			End:        100,
 			XAxisIndex: []int{0},
 		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show: true,
+		}),
+		charts.WithToolboxOpts(opts.Toolbox{
+			Show:  true,
+			Right: "20%",
+			Feature: &opts.ToolBoxFeature{
+				SaveAsImage: &opts.ToolBoxFeatureSaveAsImage{
+					Show:  true,
+					Type:  "png",
+					Title: "save as image",
+				},
+			}},
+		),
 	)
-	kline.SetXAxis(x).AddSeries("kline", y).
+	kline.SetXAxis(x).AddSeries(asset, y).
 		SetSeriesOptions(
 			charts.WithMarkPointNameTypeItemOpts(opts.MarkPointNameTypeItem{
-				Name:     "highest value",
+				Name:     "Maximum",
 				Type:     "max",
 				ValueDim: "highest",
 			}),
 			charts.WithMarkPointNameTypeItemOpts(opts.MarkPointNameTypeItem{
-				Name:     "lowest value",
+				Name:     "Minimum",
 				Type:     "min",
 				ValueDim: "lowest",
 			}),
 			charts.WithMarkPointStyleOpts(opts.MarkPointStyle{
+				Symbol: []string{"pin"},
 				Label: &opts.Label{
 					Show: true,
 				},
 			}),
 			charts.WithItemStyleOpts(opts.ItemStyle{
-				Color:        "#ec0000",
-				Color0:       "#00da3c",
-				BorderColor:  "#8A0000",
-				BorderColor0: "#008F28",
+				Color:        "#00da3c",
+				Color0:       "#ec0000",
+				BorderColor:  "#008F28",
+				BorderColor0: "#8A0000",
 			}),
 		)
 	return kline
