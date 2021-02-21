@@ -38,9 +38,9 @@ var (
 	client = &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	userAgent   = randUserAgent()
-	kd          [100]Candle
-	open, close []float64
+	userAgent = randUserAgent()
+	kd        [100]Candle
+	indicator [100]float64
 )
 
 func init() {
@@ -53,6 +53,7 @@ func main() {
  */
 func CloudCharts(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
+	var high, low [100]float64
 	timeframe := ""
 	if a := query.Get("a"); a != "" {
 		asset = a
@@ -70,32 +71,18 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 			h, _ := bar[2].(float64)
 			l, _ := bar[3].(float64)
 			c, _ := bar[4].(float64)
-			open = append(open, o)
-			close = append(close, c)
+			high[i] = h
+			low[i] = l
 			tmp.OHLC = [4]float64{o, c, l, h} // OHLC to OCLH
 			kd[i] = tmp
 		}
+		midprice := talib.MidPrice(high[:], low[:], 4)
+		copy(indicator[:], midprice)
 		kline := ohlcChart()
 		kline.Render(w)
 	} else {
 		http.Error(w, "Something went wrong, can't render chart", http.StatusInternalServerError)
 	}
-}
-
-func getQuotes(asset string, timeframe string) *Quotes {
-	var quotes Quotes
-	apiURL := fmt.Sprintf("%s%s.", apiURL, asset)
-	if timeframe != "" {
-		apiURL += "/" + timeframe
-	}
-	request, _ := http.NewRequest("GET", apiURL, nil)
-	request.Header.Set("User-Agent", userAgent)
-	if response, err := client.Do(request); err == nil {
-		if err := json.NewDecoder(response.Body).Decode(&quotes); err != nil {
-			log.Fatal(err)
-		}
-	}
-	return &quotes
 }
 
 func ohlcChart() *charts.Kline {
@@ -104,7 +91,6 @@ func ohlcChart() *charts.Kline {
 	x := make([]string, 100)
 	y := make([]opts.KlineData, 100)
 	z := make([]opts.LineData, 100)
-	indicator := talib.MidPrice(open, close, 4)
 	for i := 0; i < len(kd); i++ {
 		x[i] = kd[i].Time
 		y[i] = opts.KlineData{Value: kd[i].OHLC}
@@ -170,6 +156,21 @@ func ohlcChart() *charts.Kline {
 	lineChart := charts.NewLine()
 	lineChart.SetXAxis(x).AddSeries("Midprice", z)
 	kline.Overlap(lineChart)
-
 	return kline
+}
+
+func getQuotes(asset string, timeframe string) *Quotes {
+	var quotes Quotes
+	apiURL := fmt.Sprintf("%s%s.", apiURL, asset)
+	if timeframe != "" {
+		apiURL += "/" + timeframe
+	}
+	request, _ := http.NewRequest("GET", apiURL, nil)
+	request.Header.Set("User-Agent", userAgent)
+	if response, err := client.Do(request); err == nil {
+		if err := json.NewDecoder(response.Body).Decode(&quotes); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return &quotes
 }
