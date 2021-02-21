@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/markcheno/go-talib"
 )
 
 /*Quotes ...
@@ -37,8 +38,9 @@ var (
 	client = &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	userAgent = randUserAgent()
-	kd        [100]Candle
+	userAgent   = randUserAgent()
+	kd          [100]Candle
+	open, close []float64
 )
 
 func init() {
@@ -68,6 +70,8 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 			h, _ := bar[2].(float64)
 			l, _ := bar[3].(float64)
 			c, _ := bar[4].(float64)
+			open = append(open, o)
+			close = append(close, c)
 			tmp.OHLC = [4]float64{o, c, l, h} // OHLC to OCLH
 			kd[i] = tmp
 		}
@@ -99,14 +103,17 @@ func ohlcChart() *charts.Kline {
 	kline := charts.NewKLine()
 	x := make([]string, 100)
 	y := make([]opts.KlineData, 100)
+	z := make([]opts.LineData, 100)
+	indicator := talib.MidPrice(open, close, 4)
 	for i := 0; i < len(kd); i++ {
 		x[i] = kd[i].Time
 		y[i] = opts.KlineData{Value: kd[i].OHLC}
+		z[i] = opts.LineData{Value: indicator[i]}
 	}
 	kline.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
 			Title:    asset,
-			Subtitle: fmt.Sprintf("%.5g", kd[99].OHLC[3]),
+			Subtitle: fmt.Sprintf("%.5g", kd[99].OHLC[1]),
 		}),
 		charts.WithXAxisOpts(opts.XAxis{
 			SplitNumber: 20,
@@ -160,5 +167,9 @@ func ohlcChart() *charts.Kline {
 				BorderColor0: "#8A0000",
 			}),
 		)
+	lineChart := charts.NewLine()
+	lineChart.SetXAxis(x).AddSeries("Midprice", z)
+	kline.Overlap(lineChart)
+
 	return kline
 }
