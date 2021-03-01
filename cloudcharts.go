@@ -97,10 +97,10 @@ func ohlcChart() *charts.Kline {
 		z[i] = opts.LineData{Value: indicator[i]}
 	}
 	kline.SetGlobalOptions(
-		charts.WithInitializationOpts(opts.Initialization{PageTitle: asset}),
+		charts.WithInitializationOpts(opts.Initialization{PageTitle: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[1])}),
 		charts.WithTitleOpts(opts.Title{
-			Title:    asset,
-			Subtitle: fmt.Sprintf("%.5g", kd[99].OHLC[1]),
+			Title:    fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[1]),
+			Subtitle: fmt.Sprintf("%.5g - %.5g", kd[99].OHLC[2], kd[99].OHLC[3]),
 		}),
 		charts.WithXAxisOpts(opts.XAxis{
 			SplitNumber: 20,
