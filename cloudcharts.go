@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/components"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/markcheno/go-talib"
 )
@@ -38,9 +39,12 @@ var (
 	client = &http.Client{
 		Timeout: 5 * time.Second,
 	}
-	userAgent = randUserAgent()
-	kd        [100]Candle
-	indicator [100]float64
+	userAgent  = randUserAgent()
+	kd         [100]Candle
+	indicator0 [100]float64
+	indicator1 [100]float64
+	indicator2 [100]float64
+	typical    [100]float64
 )
 
 func init() {
@@ -73,28 +77,76 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 			c, _ := bar[4].(float64)
 			high[i] = h
 			low[i] = l
+			typical[i] = (h + l + c) / 3.0    // typical price - HLC/3
 			tmp.OHLC = [4]float64{o, c, l, h} // OHLC to OCLH
 			kd[i] = tmp
 		}
-		midprice := talib.MidPrice(high[:], low[:], 4)
-		copy(indicator[:], midprice)
-		kline := ohlcChart()
-		kline.Render(w)
+		ma0 := talib.Ma(typical[:], 10, talib.SMA)
+		ma1 := talib.Ma(typical[:], 20, talib.SMA)
+		// midprice := talib.MidPrice(high[:], low[:], 4)
+		rsi := talib.Rsi(typical[:], 10)
+		// copy(indicator1[:], midprice)
+		copy(indicator0[:], ma0)
+		copy(indicator1[:], ma1)
+		copy(indicator2[:], rsi)
+		bars := ohlcChart()
+		indicators := indicatorsChart()
+		page := components.NewPage()
+		// page.SetPageOptions(
+		// 	page.WithInitializationOpts(opts.Initialization{PageTitle: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[1])}),
+		// )
+		page.AddCharts(
+			bars,
+			indicators,
+		)
+		// bars.Render(w)
+		page.Render(w)
 	} else {
 		http.Error(w, "Something went wrong, can't render chart", http.StatusInternalServerError)
 	}
 }
 
+func indicatorsChart() *charts.Line {
+	lineChart := charts.NewLine()
+	x := make([]string, 100)
+	z := make([]opts.LineData, 100)
+	for i := 0; i < len(kd); i++ {
+		x[i] = kd[i].Time
+		z[i] = opts.LineData{Value: indicator2[i]}
+	}
+
+	lineChart.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: fmt.Sprintf("RSI(10) - %.5g", indicator2[99]),
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Scale: true,
+		}),
+		charts.WithDataZoomOpts(opts.DataZoom{
+			Type:       "slider",
+			Start:      25,
+			End:        100,
+			XAxisIndex: []int{0},
+		}),
+		charts.WithTooltipOpts(opts.Tooltip{
+			Show: true,
+		}),
+	)
+	lineChart.SetXAxis(x).AddSeries("RSI", z)
+	return lineChart
+}
 func ohlcChart() *charts.Kline {
 	// create a new chart instance
 	kline := charts.NewKLine()
 	x := make([]string, 100)
 	y := make([]opts.KlineData, 100)
+	v := make([]opts.LineData, 100)
 	z := make([]opts.LineData, 100)
 	for i := 0; i < len(kd); i++ {
 		x[i] = kd[i].Time
 		y[i] = opts.KlineData{Value: kd[i].OHLC}
-		z[i] = opts.LineData{Value: indicator[i]}
+		v[i] = opts.LineData{Value: indicator0[i]}
+		z[i] = opts.LineData{Value: indicator1[i]}
 	}
 	kline.SetGlobalOptions(
 		charts.WithInitializationOpts(opts.Initialization{PageTitle: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[1])}),
@@ -110,7 +162,7 @@ func ohlcChart() *charts.Kline {
 		}),
 		charts.WithDataZoomOpts(opts.DataZoom{
 			Type:       "slider",
-			Start:      50,
+			Start:      25,
 			End:        100,
 			XAxisIndex: []int{0},
 		}),
@@ -155,7 +207,12 @@ func ohlcChart() *charts.Kline {
 			}),
 		)
 	lineChart := charts.NewLine()
-	lineChart.SetXAxis(x).AddSeries("Midprice", z)
+	lineChart.SetGlobalOptions(
+		charts.WithYAxisOpts(opts.YAxis{
+			Scale: true,
+		}),
+	)
+	lineChart.SetXAxis(x).AddSeries("MA0", v).AddSeries("MA1", z)
 	kline.Overlap(lineChart)
 	return kline
 }

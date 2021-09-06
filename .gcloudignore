@@ -1,6 +1,7 @@
 .DS_Store
 go.sum
 README.md
+*.json
 bin/**
 .git/**
 .gitignore
