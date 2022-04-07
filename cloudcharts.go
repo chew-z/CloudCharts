@@ -43,7 +43,6 @@ var (
 	kd         [100]Candle
 	indicator0 [100]float64
 	indicator1 [100]float64
-	indicator2 [100]float64
 	typical    [100]float64
 )
 
@@ -83,21 +82,14 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 		}
 		ma0 := talib.Ma(typical[:], 10, talib.SMA)
 		ma1 := talib.Ma(typical[:], 20, talib.SMA)
-		// midprice := talib.MidPrice(high[:], low[:], 4)
-		rsi := talib.Rsi(typical[:], 10)
-		// copy(indicator1[:], midprice)
 		copy(indicator0[:], ma0)
 		copy(indicator1[:], ma1)
-		copy(indicator2[:], rsi)
 		bars := ohlcChart()
-		indicators := indicatorsChart()
+		// indicators := indicatorsChart()
 		page := components.NewPage()
-		// page.SetPageOptions(
-		// 	page.WithInitializationOpts(opts.Initialization{PageTitle: fmt.Sprintf("%s - %.5g", asset, kd[99].OHLC[1])}),
-		// )
 		page.AddCharts(
 			bars,
-			indicators,
+			// indicators,
 		)
 		// bars.Render(w)
 		page.Render(w)
@@ -106,35 +98,35 @@ func CloudCharts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func indicatorsChart() *charts.Line {
-	lineChart := charts.NewLine()
-	x := make([]string, 100)
-	z := make([]opts.LineData, 100)
-	for i := 0; i < len(kd); i++ {
-		x[i] = kd[i].Time
-		z[i] = opts.LineData{Value: indicator2[i]}
-	}
+// func indicatorsChart() *charts.Line {
+// 	lineChart := charts.NewLine()
+// 	x := make([]string, 100)
+// 	z := make([]opts.LineData, 100)
+// 	for i := 0; i < len(kd); i++ {
+// 		x[i] = kd[i].Time
+// 		z[i] = opts.LineData{Value: indicator2[i]}
+// 	}
 
-	lineChart.SetGlobalOptions(
-		charts.WithTitleOpts(opts.Title{
-			Title: fmt.Sprintf("RSI(10) - %.5g", indicator2[99]),
-		}),
-		charts.WithYAxisOpts(opts.YAxis{
-			Scale: true,
-		}),
-		charts.WithDataZoomOpts(opts.DataZoom{
-			Type:       "slider",
-			Start:      25,
-			End:        100,
-			XAxisIndex: []int{0},
-		}),
-		charts.WithTooltipOpts(opts.Tooltip{
-			Show: true,
-		}),
-	)
-	lineChart.SetXAxis(x).AddSeries("RSI", z)
-	return lineChart
-}
+// 	lineChart.SetGlobalOptions(
+// 		// charts.WithTitleOpts(opts.Title{
+// 		// 	Title: "Moon - Mercury - Venus",
+// 		// }),
+// 		charts.WithYAxisOpts(opts.YAxis{
+// 			Scale: true,
+// 		}),
+// 		charts.WithDataZoomOpts(opts.DataZoom{
+// 			Type:       "slider",
+// 			Start:      21,
+// 			End:        100,
+// 			XAxisIndex: []int{0},
+// 		}),
+// 		charts.WithTooltipOpts(opts.Tooltip{
+// 			Show: true,
+// 		}),
+// 	)
+// 	lineChart.SetXAxis(x).AddSeries("Moon", z)
+// 	return lineChart
+// }
 func ohlcChart() *charts.Kline {
 	// create a new chart instance
 	kline := charts.NewKLine()
@@ -162,7 +154,7 @@ func ohlcChart() *charts.Kline {
 		}),
 		charts.WithDataZoomOpts(opts.DataZoom{
 			Type:       "slider",
-			Start:      25,
+			Start:      21,
 			End:        100,
 			XAxisIndex: []int{0},
 		}),
